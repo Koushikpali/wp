@@ -7,13 +7,15 @@ const { PDFDocument } = require('pdf-lib');
 const cron = require('node-cron');
 
 // Create WhatsApp client with persistent login
+const puppeteer = require('puppeteer');
+
 const client = new Client({
     authStrategy: new LocalAuth({
-        dataPath: '/mnt/whatsapp-session' // Persistent Railway volume path
+        dataPath: '/mnt/whatsapp-session'
     }),
     puppeteer: {
-        headless: true,
-        executablePath: require('puppeteer').executablePath(), // Use Puppeteer's bundled Chromium
+        product: 'chrome',
+        executablePath: puppeteer.executablePath(), // ✅ Forces Puppeteer's bundled Chromium
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -25,6 +27,7 @@ const client = new Client({
         ],
     }
 });
+
 
 // Show QR code in terminal, save PNG & PDF, and log Base64 link
 client.on('qr', async (qr) => {
