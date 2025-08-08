@@ -12,11 +12,17 @@ const client = new Client({
         dataPath: '/mnt/whatsapp-session' // Persistent Railway volume path
     }),
     puppeteer: {
-        headless: true, // run without UI
+        headless: true,
+        executablePath: require('puppeteer').executablePath(), // Use Puppeteer's bundled Chromium
         args: [
             '--no-sandbox',
-            '--disable-setuid-sandbox'
-        ]
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu'
+        ],
     }
 });
 
