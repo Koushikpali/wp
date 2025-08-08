@@ -121,16 +121,17 @@ client.on('ready', async () => {
 
 
     // Schedule a daily link at 9:00 AM IST
-    cron.schedule('36 4 * * *', async () => {
+    cron.schedule('45 4 * * *', async () => {
         console.log('📤 Sending daily link...');
 
     // Schedule a daily message at 9:00 AM IST
-    cron.schedule('36 4 * * *', async () => {
+    cron.schedule('46 4 * * *', async () => {
         console.log('📤 Sending daily scheduled message...');
         try {
             let link = getNextLink();
             if (link) {
-                await client.sendMessage(groupId, `📌 🚀 Today’s DSA problem: ${link}`);
+                await client.sendMessage(groupId, `
+                this is a automated bot msg .testing is on if u receive this msg at 10:00 its working good .this is hoted online so it can send msg even when my local computer is offline 📌 🚀 Today’s DSA problem: ${link}`);
                 console.log(`✅ Sent: ${link}`);
             } else {
                 console.log('⚠ No links found to send.');
