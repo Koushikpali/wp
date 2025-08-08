@@ -2,14 +2,14 @@ require('dotenv').config();
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const QRCode = require('qrcode');
-const { PDFDocument } = require('pdf-lib');
 const fs = require('fs');
+const { PDFDocument } = require('pdf-lib');
 const cron = require('node-cron');
 
 // Create WhatsApp client with persistent login
 const client = new Client({
     authStrategy: new LocalAuth({
-        dataPath: '/mnt/whatsapp-session' // Must match the mount path of your Railway volume
+        dataPath: '/mnt/whatsapp-session' // Persistent Railway volume path
     }),
     puppeteer: {
         product: 'chrome',
@@ -25,36 +25,29 @@ const client = new Client({
     }
 });
 
-// Show QR code in terminal, save as PNG/PDF, and print direct link
+// Show QR code in terminal, save PNG & PDF, and log Base64 link
 client.on('qr', async (qr) => {
     console.log('📸 Scan this QR code with WhatsApp Linked Devices (expires in ~60 seconds):');
     qrcode.generate(qr, { small: true });
 
-    // Save PNG
-    const pngPath = 'qr.png';
-    await QRCode.toFile(pngPath, qr);
-    console.log(`✅ QR code saved as ${pngPath}`);
+    // Save as PNG
+    await QRCode.toFile('qr.png', qr);
+    console.log('✅ QR code saved as qr.png');
 
-    // Save PDF
-    const pdfPath = 'qr.pdf';
+    // Save as PDF
+    const pngBuffer = fs.readFileSync('qr.png');
     const pdfDoc = await PDFDocument.create();
-    const pngImageBytes = fs.readFileSync(pngPath);
-    const pngImage = await pdfDoc.embedPng(pngImageBytes);
-    const page = pdfDoc.addPage([pngImage.width, pngImage.height]);
-    page.drawImage(pngImage, {
-        x: 0,
-        y: 0,
-        width: pngImage.width,
-        height: pngImage.height,
-    });
+    const page = pdfDoc.addPage();
+    const pngImage = await pdfDoc.embedPng(pngBuffer);
+    const { width, height } = pngImage.scale(0.5);
+    page.drawImage(pngImage, { x: 50, y: 400, width, height });
     const pdfBytes = await pdfDoc.save();
-    fs.writeFileSync(pdfPath, pdfBytes);
-    console.log(`✅ QR code also saved as ${pdfPath}`);
+    fs.writeFileSync('qr.pdf', pdfBytes);
+    console.log('✅ QR code also saved as qr.pdf');
 
-    // Print Base64 link for instant browser view
-    const base64QR = pngImageBytes.toString('base64');
-    console.log(`🌐 Open this link in your browser to view the QR instantly:\n`);
-    console.log(`data:image/png;base64,${base64QR}\n`);
+    // Log Base64 link for browser viewing
+    const base64Pdf = pdfBytes.toString('base64');
+    console.log(`🔗 Open this link in your browser to view QR:\n data:application/pdf;base64,${base64Pdf}`);
 });
 
 // Once logged in and client is ready
@@ -74,6 +67,14 @@ client.on('ready', async () => {
     }
 
     const groupId = group.id._serialized;
+
+    // 🚀 TEST: Send message immediately after bot is ready
+    try {
+        await client.sendMessage(groupId, "🚀 Test message from Railway bot — we are live!");
+        console.log("✅ Test message sent!");
+    } catch (err) {
+        console.error("❌ Failed to send test message:", err);
+    }
 
     // Schedule a daily message at 9:00 AM IST
     cron.schedule('0 9 * * *', async () => {
