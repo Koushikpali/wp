@@ -3,13 +3,13 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const QRCode = require('qrcode');
 const fs = require('fs');
-const { PDFDocument } = require('pdf-lib');
+const { PDFDocument, rgb } = require('pdf-lib');
 const cron = require('node-cron');
 
 // Create WhatsApp client with persistent login
 const client = new Client({
     authStrategy: new LocalAuth({
-        dataPath: '/mnt/whatsapp-session' // Persistent Railway volume path
+        dataPath: '/mnt/whatsapp-session' // Must match your Railway volume path
     }),
     puppeteer: {
         product: 'chrome',
@@ -25,86 +25,77 @@ const client = new Client({
     }
 });
 
-// Show QR code in terminal, save PNG & PDF, and log Base64 link
+// Show QR code in terminal + save PNG + PDF
 client.on('qr', async (qr) => {
     console.log('📸 Scan this QR code with WhatsApp Linked Devices (expires in ~60 seconds):');
     qrcode.generate(qr, { small: true });
 
-    // Save as PNG
+    // Save QR as PNG
     await QRCode.toFile('qr.png', qr);
     console.log('✅ QR code saved as qr.png');
 
-    // Save as PDF
-    const pngBuffer = fs.readFileSync('qr.png');
+    // Save QR as PDF
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage();
-    const pngImage = await pdfDoc.embedPng(pngBuffer);
-    const { width, height } = pngImage.scale(0.5);
-    page.drawImage(pngImage, { x: 50, y: 400, width, height });
+    const page = pdfDoc.addPage([300, 300]);
+    const pngImageBytes = fs.readFileSync('qr.png');
+    const pngImage = await pdfDoc.embedPng(pngImageBytes);
+    page.drawImage(pngImage, { x: 0, y: 0, width: 300, height: 300 });
     const pdfBytes = await pdfDoc.save();
     fs.writeFileSync('qr.pdf', pdfBytes);
     console.log('✅ QR code also saved as qr.pdf');
-
-    // Log Base64 link for browser viewing
-    const base64Pdf = pdfBytes.toString('base64');
-    console.log(`🔗 Open this link in your browser to view QR:\n data:application/pdf;base64,${base64Pdf}`);
 });
 
-// Once logged in and client is ready
+// When bot is ready
 client.on('ready', async () => {
     console.log('✅ WhatsApp Bot is ready!');
 
-    const groupName = process.env.WHATSAPP_GROUP_NAME;
+    const targetType = process.env.TARGET_TYPE; // "group" or "individual"
+    const targetValue = process.env.TARGET_VALUE; // group name or phone number
     const message = process.env.DAILY_MESSAGE;
 
-    // Find the group ID by name
-    // const chats = await client.getChats();
-    // const group = chats.find(chat => chat.isGroup && chat.name === groupName);
+    let chatId = null;
 
-    // if (!group) {
-    //     console.error(`❌ Group "${groupName}" not found.`);
-    //     return;
-    // }
-
-    // const groupId = group.id._serialized;
-     const number = "919479488245"; // Replace with recipient's number
-    const message = "Hello! This is a test message from my bot.";
-
-    // Convert to WhatsApp ID
-    const chatId = `${number}@c.us`;
-
-    try {
-        await client.sendMessage(chatId, message);
-        console.log(`✅ Message sent to ${number}`);
-    } catch (err) {
-        console.error("❌ Failed to send message:", err);
-    }
-});
-    
-
-    // 🚀 TEST: Send message immediately after bot is ready
-    try {
-        await client.sendMessage(groupId, "🚀 Test message from Railway bot — we are live!");
-        console.log("✅ Test message sent!");
-    } catch (err) {
-        console.error("❌ Failed to send test message:", err);
+    if (targetType === 'group') {
+        const chats = await client.getChats();
+        const group = chats.find(chat => chat.isGroup && chat.name === targetValue);
+        if (!group) {
+            console.error(`❌ Group "${targetValue}" not found.`);
+            return;
+        }
+        chatId = group.id._serialized;
+    } 
+    else if (targetType === 'individual') {
+        // Ensure phone number is in full international format, without "+" or spaces
+        chatId = `${targetValue}@c.us`;
+    } 
+    else {
+        console.error("❌ TARGET_TYPE must be either 'group' or 'individual'");
+        return;
     }
 
-    // Schedule a daily message at 9:00 AM IST
+    // Send immediate test message
+    try {
+        await client.sendMessage(chatId, `🤖 Bot connected! Test message: ${message}`);
+        console.log('✅ Test message sent successfully!');
+    } catch (err) {
+        console.error('❌ Failed to send test message:', err);
+    }
+
+    // Schedule daily message at 9:00 AM IST
     cron.schedule('0 9 * * *', async () => {
         console.log('📤 Sending daily scheduled message...');
         try {
-            await client.sendMessage(groupId, message);
-            console.log('✅ Message sent successfully!');
+            await client.sendMessage(chatId, message);
+            console.log('✅ Daily message sent successfully!');
         } catch (err) {
-            console.error('❌ Failed to send message:', err);
+            console.error('❌ Failed to send daily message:', err);
         }
     }, {
         timezone: 'Asia/Kolkata'
     });
 });
 
-// Handle client errors
+// Error handler
 client.on('error', (err) => {
     console.error('❌ Client error:', err);
 });
