@@ -58,15 +58,29 @@ client.on('ready', async () => {
     const message = process.env.DAILY_MESSAGE;
 
     // Find the group ID by name
-    const chats = await client.getChats();
-    const group = chats.find(chat => chat.isGroup && chat.name === groupName);
+    // const chats = await client.getChats();
+    // const group = chats.find(chat => chat.isGroup && chat.name === groupName);
 
-    if (!group) {
-        console.error(`❌ Group "${groupName}" not found.`);
-        return;
+    // if (!group) {
+    //     console.error(`❌ Group "${groupName}" not found.`);
+    //     return;
+    // }
+
+    // const groupId = group.id._serialized;
+     const number = "919479488245"; // Replace with recipient's number
+    const message = "Hello! This is a test message from my bot.";
+
+    // Convert to WhatsApp ID
+    const chatId = `${number}@c.us`;
+
+    try {
+        await client.sendMessage(chatId, message);
+        console.log(`✅ Message sent to ${number}`);
+    } catch (err) {
+        console.error("❌ Failed to send message:", err);
     }
-
-    const groupId = group.id._serialized;
+});
+    
 
     // 🚀 TEST: Send message immediately after bot is ready
     try {
