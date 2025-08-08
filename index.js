@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // require('dotenv').config();
 // const { Client, LocalAuth } = require('whatsapp-web.js');
 // const qrcode = require('qrcode-terminal');
@@ -100,6 +101,9 @@
 // });
 
 // client.initialize();
+=======
+
+>>>>>>> 6190d6caac00ae2186513fd5ea2ea5adba7ec71d
 require('dotenv').config();
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
@@ -221,9 +225,15 @@ client.on('ready', async () => {
         console.log(`✅ Sent: ${link}`);
     }
 
+<<<<<<< HEAD
     // Schedule a daily link at 9:00 AM IST
     cron.schedule('0 9 * * *', async () => {
         console.log('📤 Sending daily link...');
+=======
+    // Schedule a daily message at 9:00 AM IST
+    cron.schedule('29 3 * * *', async () => {
+        console.log('📤 Sending daily scheduled message...');
+>>>>>>> 6190d6caac00ae2186513fd5ea2ea5adba7ec71d
         try {
             let link = getNextLink();
             if (link) {
