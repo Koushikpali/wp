@@ -12,16 +12,11 @@ const client = new Client({
         dataPath: '/mnt/whatsapp-session' // Persistent Railway volume path
     }),
     puppeteer: {
-        product: 'chrome',
+        headless: true, // run without UI
         args: [
             '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu'
-        ],
+            '--disable-setuid-sandbox'
+        ]
     }
 });
 
@@ -68,7 +63,7 @@ client.on('ready', async () => {
 
     const groupId = group.id._serialized;
 
-    // 🚀 TEST: Send message immediately after bot is ready
+    // 🚀 Send a test message immediately after bot is ready
     try {
         await client.sendMessage(groupId, "🚀 Test message from Railway bot — we are live!");
         console.log("✅ Test message sent!");
