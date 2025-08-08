@@ -1,17 +1,17 @@
 require('dotenv').config();
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
 const cron = require('node-cron');
+const open = require('open'); // npm install open
 
 // Create WhatsApp client with persistent login
-
 const client = new Client({
     authStrategy: new LocalAuth({
-        dataPath: '/mnt/whatsapp-session'
-      // 👈 must match the mount path of your Railway volume
+        dataPath: '/mnt/whatsapp-session' // Must match the mount path of your Railway volume
     }),
     puppeteer: {
-          product: 'chrome',
+        product: 'chrome',
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -21,13 +21,23 @@ const client = new Client({
             '--no-zygote',
             '--disable-gpu'
         ],
-      
     }
 });
-// Show QR code in terminal
+
+// Show QR code in terminal & as PNG
 client.on('qr', (qr) => {
-    console.log('Scan this QR code with your phone:');
+    console.log('📸 Scan this QR code with WhatsApp Linked Devices (expires in ~60 seconds):');
     qrcode.generate(qr, { small: true });
+
+    // Save QR as PNG instantly
+    QRCode.toFile('qr.png', qr, (err) => {
+        if (err) {
+            console.error('❌ Error saving QR:', err);
+        } else {
+            console.log('✅ QR code saved as qr.png');
+            open('qr.png'); // Auto-open the QR image so you can scan immediately
+        }
+    });
 });
 
 // Once logged in and client is ready
