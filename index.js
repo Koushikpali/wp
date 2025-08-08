@@ -7,7 +7,8 @@ const cron = require('node-cron');
 
 const client = new Client({
     authStrategy: new LocalAuth({
-        dataPath: '/app/whatsapp-session'  // 👈 must match the mount path of your Railway volume
+        dataPath: '/mnt/whatsapp-session'
+      // 👈 must match the mount path of your Railway volume
     }),
     puppeteer: {
           product: 'chrome',
