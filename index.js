@@ -121,16 +121,16 @@ client.on('ready', async () => {
 
 
     // Schedule a daily link at 9:00 AM IST
-    cron.schedule('0 9 * * *', async () => {
+    cron.schedule('36 4 * * *', async () => {
         console.log('📤 Sending daily link...');
 
     // Schedule a daily message at 9:00 AM IST
-    cron.schedule('10 4 * * *', async () => {
+    cron.schedule('36 4 * * *', async () => {
         console.log('📤 Sending daily scheduled message...');
         try {
             let link = getNextLink();
             if (link) {
-                await client.sendMessage(groupId, `📌 Today's link: ${link}`);
+                await client.sendMessage(groupId, `📌 🚀 Today’s DSA problem: ${link}`);
                 console.log(`✅ Sent: ${link}`);
             } else {
                 console.log('⚠ No links found to send.');
