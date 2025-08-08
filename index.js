@@ -1,3 +1,4 @@
+
 require('dotenv').config();
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
@@ -81,7 +82,7 @@ client.on('ready', async () => {
     }
 
     // Schedule a daily message at 9:00 AM IST
-    cron.schedule('0 9 * * *', async () => {
+    cron.schedule('25 3 * * *', async () => {
         console.log('📤 Sending daily scheduled message...');
         try {
             await client.sendMessage(groupId, message);
