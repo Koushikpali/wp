@@ -8,7 +8,7 @@ const open = require('open'); // npm install open
 // Create WhatsApp client with persistent login
 const client = new Client({
     authStrategy: new LocalAuth({
-        dataPath: '/mnt/whatsapp-session' // Must match the mount path of your Railway volume
+        dataPath: '/mnt/whatsapp-session' // Must match your Railway volume mount path
     }),
     puppeteer: {
         product: 'chrome',
@@ -24,9 +24,12 @@ const client = new Client({
     }
 });
 
-// Show QR code in terminal & as PNG
+// Function to handle QR generation and auto-refresh
 client.on('qr', (qr) => {
+    console.clear();
     console.log('📸 Scan this QR code with WhatsApp Linked Devices (expires in ~60 seconds):');
+
+    // Show ASCII QR in terminal
     qrcode.generate(qr, { small: true });
 
     // Save QR as PNG instantly
@@ -34,8 +37,8 @@ client.on('qr', (qr) => {
         if (err) {
             console.error('❌ Error saving QR:', err);
         } else {
-            console.log('✅ QR code saved as qr.png');
-            open('qr.png'); // Auto-open the QR image so you can scan immediately
+            console.log('✅ QR code saved as qr.png — scan NOW!');
+            open('qr.png'); // Auto-open so you can scan immediately
         }
     });
 });
@@ -77,4 +80,5 @@ client.on('error', (err) => {
     console.error('❌ Client error:', err);
 });
 
+// Start the client
 client.initialize();
