@@ -10,6 +10,7 @@ const client = new Client({
         dataPath: '/app/whatsapp-session'  // 👈 must match the mount path of your Railway volume
     }),
     puppeteer: {
+          product: 'chrome',
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
