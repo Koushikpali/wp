@@ -2,19 +2,14 @@ require('dotenv').config();
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const QRCode = require('qrcode');
+const { PDFDocument } = require('pdf-lib');
 const fs = require('fs');
-const { PDFDocument } = require('pdf-lib'); // npm install pdf-lib
 const cron = require('node-cron');
-
-let open;
-if (process.env.LOCAL_DEV === 'true') {
-    import('open').then(module => { open = module.default; });
-}
 
 // Create WhatsApp client with persistent login
 const client = new Client({
     authStrategy: new LocalAuth({
-        dataPath: '/mnt/whatsapp-session' // Must match Railway volume path
+        dataPath: '/mnt/whatsapp-session' // Must match the mount path of your Railway volume
     }),
     puppeteer: {
         product: 'chrome',
@@ -30,40 +25,36 @@ const client = new Client({
     }
 });
 
-// Show QR code in terminal, save as PNG & PDF, keep regenerating until scanned
+// Show QR code in terminal, save as PNG/PDF, and print direct link
 client.on('qr', async (qr) => {
-    console.clear();
     console.log('📸 Scan this QR code with WhatsApp Linked Devices (expires in ~60 seconds):');
     qrcode.generate(qr, { small: true });
 
     // Save PNG
-    QRCode.toFile('qr.png', qr, async (err) => {
-        if (err) {
-            console.error('❌ Error saving QR as PNG:', err);
-        } else {
-            console.log('✅ QR code saved as qr.png');
+    const pngPath = 'qr.png';
+    await QRCode.toFile(pngPath, qr);
+    console.log(`✅ QR code saved as ${pngPath}`);
 
-            // Save PDF
-            try {
-                const pdfDoc = await PDFDocument.create();
-                const page = pdfDoc.addPage([300, 300]);
-                const pngImageBytes = fs.readFileSync('qr.png');
-                const pngImage = await pdfDoc.embedPng(pngImageBytes);
-                const { width, height } = pngImage.scale(1);
-                page.drawImage(pngImage, { x: 0, y: 0, width, height });
-                const pdfBytes = await pdfDoc.save();
-                fs.writeFileSync('qr.pdf', pdfBytes);
-                console.log('✅ QR code also saved as qr.pdf');
-            } catch (pdfErr) {
-                console.error('❌ Error saving QR as PDF:', pdfErr);
-            }
-
-            // Auto-open locally
-            if (process.env.LOCAL_DEV === 'true' && open) {
-                open('qr.png');
-            }
-        }
+    // Save PDF
+    const pdfPath = 'qr.pdf';
+    const pdfDoc = await PDFDocument.create();
+    const pngImageBytes = fs.readFileSync(pngPath);
+    const pngImage = await pdfDoc.embedPng(pngImageBytes);
+    const page = pdfDoc.addPage([pngImage.width, pngImage.height]);
+    page.drawImage(pngImage, {
+        x: 0,
+        y: 0,
+        width: pngImage.width,
+        height: pngImage.height,
     });
+    const pdfBytes = await pdfDoc.save();
+    fs.writeFileSync(pdfPath, pdfBytes);
+    console.log(`✅ QR code also saved as ${pdfPath}`);
+
+    // Print Base64 link for instant browser view
+    const base64QR = pngImageBytes.toString('base64');
+    console.log(`🌐 Open this link in your browser to view the QR instantly:\n`);
+    console.log(`data:image/png;base64,${base64QR}\n`);
 });
 
 // Once logged in and client is ready
@@ -73,6 +64,7 @@ client.on('ready', async () => {
     const groupName = process.env.WHATSAPP_GROUP_NAME;
     const message = process.env.DAILY_MESSAGE;
 
+    // Find the group ID by name
     const chats = await client.getChats();
     const group = chats.find(chat => chat.isGroup && chat.name === groupName);
 
@@ -83,7 +75,7 @@ client.on('ready', async () => {
 
     const groupId = group.id._serialized;
 
-    // Schedule daily message
+    // Schedule a daily message at 9:00 AM IST
     cron.schedule('0 9 * * *', async () => {
         console.log('📤 Sending daily scheduled message...');
         try {
@@ -97,7 +89,7 @@ client.on('ready', async () => {
     });
 });
 
-// Error handling
+// Handle client errors
 client.on('error', (err) => {
     console.error('❌ Client error:', err);
 });
