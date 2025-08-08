@@ -7,6 +7,8 @@ const { PDFDocument } = require('pdf-lib');
 const cron = require('node-cron');
 const puppeteer = require('puppeteer');
 const path = require('path');
+const railwayTime = process.env.RAILWAY_TIME || '09:00';
+const [hour, minute] = railwayTime.split(':').map(Number);
 
 // ======== LINK ROTATION LOGIC ======== //
 const linksFilePath = path.join(__dirname, 'link.txt');
@@ -121,11 +123,11 @@ client.on('ready', async () => {
 
 
     // Schedule a daily link at 9:00 AM IST
-    cron.schedule('55 4 * * *', async () => {
-        console.log('📤 Sending daily link...');
+    // cron.schedule('55 4 * * *', async () => {
+    //     console.log('📤 Sending daily link...');
 
     // Schedule a daily message at 9:00 AM IST
-    cron.schedule('55 4 * * *', async () => {
+    cron.schedule(`${minute} ${hour} * * *`, async () => {
         console.log('📤 Sending daily scheduled message...');
         try {
             let link = getNextLink();
@@ -142,7 +144,7 @@ client.on('ready', async () => {
     }, {
         timezone: 'Asia/Kolkata'
     });
-});
+// });
 })
 // ======== ERROR HANDLING ======== //
 client.on('error', (err) => {
