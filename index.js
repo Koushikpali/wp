@@ -3,12 +3,11 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const QRCode = require('qrcode');
 const cron = require('node-cron');
-const open = require('open'); // npm install open
 
 // Create WhatsApp client with persistent login
 const client = new Client({
     authStrategy: new LocalAuth({
-        dataPath: '/mnt/whatsapp-session' // Must match your Railway volume mount path
+        dataPath: '/mnt/whatsapp-session' // Must match Railway volume mount path
     }),
     puppeteer: {
         product: 'chrome',
@@ -24,33 +23,38 @@ const client = new Client({
     }
 });
 
-// Function to handle QR generation and auto-refresh
-client.on('qr', (qr) => {
+// QR code handler
+client.on('qr', async (qr) => {
     console.clear();
     console.log('📸 Scan this QR code with WhatsApp Linked Devices (expires in ~60 seconds):');
 
     // Show ASCII QR in terminal
     qrcode.generate(qr, { small: true });
 
-    // Save QR as PNG instantly
-    QRCode.toFile('qr.png', qr, (err) => {
+    // Save QR as PNG
+    QRCode.toFile('qr.png', qr, async (err) => {
         if (err) {
             console.error('❌ Error saving QR:', err);
         } else {
-            console.log('✅ QR code saved as qr.png — scan NOW!');
-            open('qr.png'); // Auto-open so you can scan immediately
+            console.log('✅ QR code saved as qr.png');
+
+            // Auto-open only if LOCAL_DEV=true
+            if (process.env.LOCAL_DEV === 'true') {
+                const open = (await import('open')).default;
+                open('qr.png');
+            }
         }
     });
 });
 
-// Once logged in and client is ready
+// Bot ready event
 client.on('ready', async () => {
     console.log('✅ WhatsApp Bot is ready!');
 
     const groupName = process.env.WHATSAPP_GROUP_NAME;
     const message = process.env.DAILY_MESSAGE;
 
-    // Find the group ID by name
+    // Find group by name
     const chats = await client.getChats();
     const group = chats.find(chat => chat.isGroup && chat.name === groupName);
 
@@ -61,7 +65,7 @@ client.on('ready', async () => {
 
     const groupId = group.id._serialized;
 
-    // Schedule a daily message at 9:00 AM IST
+    // Schedule message at 9:00 AM IST daily
     cron.schedule('0 9 * * *', async () => {
         console.log('📤 Sending daily scheduled message...');
         try {
@@ -75,10 +79,10 @@ client.on('ready', async () => {
     });
 });
 
-// Handle client errors
+// Handle errors
 client.on('error', (err) => {
     console.error('❌ Client error:', err);
 });
 
-// Start the client
+// Start client
 client.initialize();
