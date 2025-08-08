@@ -4,10 +4,24 @@ const qrcode = require('qrcode-terminal');
 const cron = require('node-cron');
 
 // Create WhatsApp client with persistent login
-const client = new Client({
-    authStrategy: new LocalAuth()
-});
 
+const client = new Client({
+    authStrategy: new LocalAuth({
+        dataPath: '/app/whatsapp-session'  // 👈 must match the mount path of your Railway volume
+    }),
+    puppeteer: {
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu'
+        ],
+      
+    }
+});
 // Show QR code in terminal
 client.on('qr', (qr) => {
     console.log('Scan this QR code with your phone:');
