@@ -113,11 +113,11 @@ client.on('ready', async () => {
     const groupId = group.id._serialized;
 
     // 🚀 Send today's link immediately
-    let link = getNextLink();
-    if (link) {
-        await client.sendMessage(groupId, `📌 Today's link: ${link}`);
-        console.log(`✅ Sent: ${link}`);
-    }
+    // let link = getNextLink();
+    // if (link) {
+    //     await client.sendMessage(groupId, `📌 Today's link: ${link}`);
+    //     console.log(`✅ Sent: ${link}`);
+    // }
 
 
     // Schedule a daily link at 9:00 AM IST
