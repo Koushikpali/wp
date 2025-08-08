@@ -125,7 +125,7 @@ client.on('ready', async () => {
         console.log('📤 Sending daily link...');
 
     // Schedule a daily message at 9:00 AM IST
-    cron.schedule('29 3 * * *', async () => {
+    cron.schedule('34 4 * * *', async () => {
         console.log('📤 Sending daily scheduled message...');
         try {
             let link = getNextLink();
