@@ -82,7 +82,7 @@ client.on('ready', async () => {
     }
 
     // Schedule a daily message at 9:00 AM IST
-    cron.schedule('25 3 * * *', async () => {
+    cron.schedule('29 3 * * *', async () => {
         console.log('📤 Sending daily scheduled message...');
         try {
             await client.sendMessage(groupId, message);
