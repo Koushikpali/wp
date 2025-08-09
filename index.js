@@ -1,154 +1,65 @@
-require('dotenv').config();
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
-const QRCode = require('qrcode');
-const fs = require('fs');
-const { PDFDocument } = require('pdf-lib');
-const cron = require('node-cron');
-const puppeteer = require('puppeteer');
-const path = require('path');
-const railwayTime = process.env.RAILWAY_TIME || '09:00';
-const [hour, minute] = railwayTime.split(':').map(Number);
+// index.js
 
-// ======== LINK ROTATION LOGIC ======== //
-const linksFilePath = path.join(__dirname, 'link.txt');
-const indexFilePath = path.join(__dirname, 'linkIndex.json');
+// ===== Dependencies =====
+const express = require("express");
+const { Client, LocalAuth } = require("whatsapp-web.js");
+require("dotenv").config();
 
-function getLinks() {
-    try {
-        const data = fs.readFileSync(linksFilePath, 'utf-8')
-            .split('\n')
-            .map(line => line.trim())
-            .filter(line => line.length > 0);
-        return data;
-    } catch (err) {
-        console.error('❌ Error reading links file:', err);
-        return [];
-    }
-}
+// ===== Timezone =====
+const TIMEZONE = "Asia/Kolkata";
 
-function getLastIndex() {
-    try {
-        if (fs.existsSync(indexFilePath)) {
-            const json = JSON.parse(fs.readFileSync(indexFilePath, 'utf-8'));
-            return json.lastIndex || 0;
-        }
-    } catch (err) {
-        console.error('❌ Error reading index file:', err);
-    }
-    return 0;
-}
+// ===== Startup Marker =====
+console.log(`🚀 Bot starting up at ${new Date().toLocaleString("en-IN", { timeZone: TIMEZONE })}`);
 
-function saveLastIndex(index) {
-    fs.writeFileSync(indexFilePath, JSON.stringify({ lastIndex: index }, null, 2));
-}
+// ===== Keep-Alive Express Server =====
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-function getNextLink() {
-    const links = getLinks();
-    if (links.length === 0) return null;
+app.get("/", (req, res) => {
+    res.send("✅ WhatsApp bot is alive!");
+});
+app.listen(PORT, () => {
+    console.log(`🌐 Keep-alive server running on port ${PORT}`);
+});
 
-    let lastIndex = getLastIndex();
-    let nextIndex = lastIndex % links.length; // wrap around if needed
-    const linkToSend = links[nextIndex];
-    saveLastIndex(nextIndex + 1);
-    return linkToSend;
-}
+// ===== Heartbeat Logger =====
+setInterval(() => {
+    console.log(`💓 Bot alive at ${new Date().toLocaleString("en-IN", { timeZone: TIMEZONE })}`);
+}, 5 * 60 * 1000); // every 5 minutes
 
-// ======== WHATSAPP CLIENT SETUP ======== //
+// ===== WhatsApp Client =====
 const client = new Client({
-    authStrategy: new LocalAuth({
-        dataPath: '/mnt/whatsapp-session'
-    }),
-    puppeteer: {
-        product: 'chrome',
-        executablePath: puppeteer.executablePath(),
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu'
-        ],
-    }
+    authStrategy: new LocalAuth(),
+    puppeteer: { headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] }
 });
 
-// ======== QR CODE HANDLING ======== //
-client.on('qr', async (qr) => {
-    console.log('📸 Scan this QR code with WhatsApp Linked Devices (expires in ~60 seconds):');
-    qrcode.generate(qr, { small: true });
-
-    // Save as PNG
-    await QRCode.toFile('qr.png', qr);
-    console.log('✅ QR code saved as qr.png');
-
-    // Save as PDF
-    const pngBuffer = fs.readFileSync('qr.png');
-    const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage();
-    const pngImage = await pdfDoc.embedPng(pngBuffer);
-    const { width, height } = pngImage.scale(0.5);
-    page.drawImage(pngImage, { x: 50, y: 400, width, height });
-    const pdfBytes = await pdfDoc.save();
-    fs.writeFileSync('qr.pdf', pdfBytes);
-    console.log('✅ QR code also saved as qr.pdf');
-
-    // Log Base64 link for browser viewing
-    const base64Pdf = pdfBytes.toString('base64');
-    console.log(`🔗 Open this link in your browser to view QR:\n data:application/pdf;base64,${base64Pdf}`);
+client.on("qr", qr => {
+    console.log("📸 QR RECEIVED — scan in WhatsApp Web to login");
 });
 
-// ======== WHEN CLIENT IS READY ======== //
-client.on('ready', async () => {
-    console.log('✅ WhatsApp Bot is ready!');
+client.on("ready", () => {
+    console.log("✅ WhatsApp Bot is ready!");
+});
 
-    const groupName = process.env.WHATSAPP_GROUP_NAME;
-    const chats = await client.getChats();
-    const group = chats.find(chat => chat.isGroup && chat.name === groupName);
+client.on("disconnected", (reason) => {
+    console.log(`⚠️ WhatsApp disconnected: ${reason}. Attempting to reconnect...`);
+    client.initialize(); // auto-reconnect
+});
 
-    if (!group) {
-        console.error(`❌ Group "${groupName}" not found.`);
-        return;
-    }
-
-    const groupId = group.id._serialized;
-
-    // 🚀 Send today's link immediately
-    // let link = getNextLink();
-    // if (link) {
-    //     await client.sendMessage(groupId, `📌 Today's link: ${link}`);
-    //     console.log(`✅ Sent: ${link}`);
-    // }
-
-
-    // Schedule a daily link at 9:00 AM IST
-    // cron.schedule('55 4 * * *', async () => {
-    //     console.log('📤 Sending daily link...');
-
-    // Schedule a daily message at 9:00 AM IST
-    cron.schedule(`${minute} ${hour} * * *`, async () => {
-        console.log('📤 Sending daily scheduled message...');
-        try {
-            let link = getNextLink();
-            if (link) {
-                await client.sendMessage(groupId, `
-                this is a automated bot msg .testing is on if u receive this msg at 10:00 its working good .this is hoted online so it can send msg even when my local computer is offline 📌 🚀 Today’s DSA problem: ${link}`);
-                console.log(`✅ Sent: ${link}`);
-            } else {
-                console.log('⚠ No links found to send.');
-            }
-        } catch (err) {
-            console.error('❌ Failed to send link:', err);
+// ===== Example Scheduled Message =====
+function scheduleMessage(hour, minute, chatId, message) {
+    setInterval(() => {
+        const now = new Date(new Date().toLocaleString("en-IN", { timeZone: TIMEZONE }));
+        if (now.getHours() === hour && now.getMinutes() === minute) {
+            client.sendMessage(chatId, message)
+                .then(() => console.log(`📤 Sent message to ${chatId} at ${now}`))
+                .catch(err => console.error("❌ Error sending message:", err));
         }
-    }, {
-        timezone: 'Asia/Kolkata'
-    });
-// });
-})
-// ======== ERROR HANDLING ======== //
-client.on('error', (err) => {
-    console.error('❌ Client error:', err);
-});
+    }, 60 * 1000); // check every minute
+}
 
+// Example usage: send at 10:00 AM
+scheduleMessage(10, 0, "91XXXXXXXXXX@c.us", "Good morning! 🌞");
+
+// ===== Start WhatsApp Client =====
 client.initialize();
