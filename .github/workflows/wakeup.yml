@@ -1,1 +1,14 @@
+name: Wake Railway Bot
 
+on:
+  schedule:
+    - cron: "25 4 * * *" # This is 03:25 UTC, which is 5 minutes before 09:00 IST
+  workflow_dispatch: # Allows you to manually run the workflow
+
+jobs:
+  wakeup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake up Railway app
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" https://wp-production-fe77.up.railway.app/
