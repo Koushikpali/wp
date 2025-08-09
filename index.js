@@ -24,11 +24,6 @@ const PORT = process.env.PORT || 3000;
 app.get('/', (req, res) => res.send('✅ Bot is alive!'));
 app.listen(PORT, () => console.log(`🌐 Keep-alive server running on port ${PORT}`));
 
-// ======== HEARTBEAT LOG ========
-setInterval(() => {
-    console.log(`💓 Bot alive at ${new Date().toLocaleString('en-IN', { timeZone: TIMEZONE })}`);
-}, 5 * 60 * 1000);
-
 // ======== LINK ROTATION ========
 const linksFilePath = path.join(__dirname, 'link.txt');
 const indexFilePath = path.join(__dirname, 'linkIndex.json');
