@@ -30,10 +30,12 @@ const indexFilePath = path.join(__dirname, 'linkIndex.json');
 
 function getLinks() {
     try {
-        return fs.readFileSync(linksFilePath, 'utf-8')
+        const links = fs.readFileSync(linksFilePath, 'utf-8')
             .split('\n')
             .map(line => line.trim())
             .filter(line => line.length > 0);
+        console.log(`DEBUG: Loaded ${links.length} links.`);
+        return links;
     } catch (err) {
         console.error('❌ Error reading links file:', err);
         return [];
@@ -53,7 +55,11 @@ function getLastIndex() {
 }
 
 function saveLastIndex(index) {
-    fs.writeFileSync(indexFilePath, JSON.stringify({ lastIndex: index }, null, 2));
+    try {
+        fs.writeFileSync(indexFilePath, JSON.stringify({ lastIndex: index }, null, 2));
+    } catch (err) {
+        console.error('❌ Error saving index file:', err);
+    }
 }
 
 function getNextLink() {
@@ -62,8 +68,17 @@ function getNextLink() {
     let lastIndex = getLastIndex();
     let nextIndex = lastIndex % links.length;
     const linkToSend = links[nextIndex];
+    console.log(`DEBUG: lastIndex=${lastIndex}, nextIndex=${nextIndex}, chosen link=${linkToSend}`);
     saveLastIndex(nextIndex + 1);
     return linkToSend;
+}
+
+// ======== SEND MESSAGE WITH TIMEOUT ========
+async function sendWithTimeout(chatId, message, timeoutMs = 10000) {
+    return Promise.race([
+        client.sendMessage(chatId, message),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Send timeout")), timeoutMs))
+    ]);
 }
 
 // ======== WHATSAPP CLIENT ========
@@ -108,44 +123,63 @@ client.on('qr', async (qr) => {
     console.log(`🔗 Open in browser: data:application/pdf;base64,${base64Pdf}`);
 });
 
-// ======== WHEN CLIENT IS READY ========
+// ======== CLIENT READY ========
 client.on('ready', async () => {
     console.log('✅ WhatsApp Bot is ready!');
+});
 
-    const groupName = process.env.WHATSAPP_GROUP_NAME;
-    const chats = await client.getChats();
-    const group = chats.find(chat => chat.isGroup && chat.name === groupName);
+// ======== CRON JOB ========
+cron.schedule(`${minute} ${hour} * * *`, async () => {
+    console.log('📤 Sending daily scheduled message...');
 
-    if (!group) {
-        console.error(`❌ Group "${groupName}" not found.`);
+    // Connection check
+    if (!client.info || !client.info.wid) {
+        console.log("⚠ WhatsApp client not connected, skipping send.");
         return;
     }
 
-    const groupId = group.id._serialized;
-
-    // ======== DAILY MESSAGE ========
-    cron.schedule(`${minute} ${hour} * * *`, async () => {
-        console.log('📤 Sending daily scheduled message...');
-        try {
-            let link = getNextLink();
-            if (link) {
-                await client.sendMessage(groupId, `
-this is an automated bot msg. Testing is on. If you receive this msg at ${railwayTime} IST, it's working fine 🚀 📌 Today’s DSA problem: ${link}`);
-                console.log(`✅ Sent: ${link}`);
-            } else {
-                console.log('⚠ No links found to send.');
-            }
-        } catch (err) {
-            console.error('❌ Failed to send link:', err);
+    try {
+        // Get latest group ID each time
+        const chats = await client.getChats();
+        const group = chats.find(chat => chat.isGroup && chat.name === process.env.WHATSAPP_GROUP_NAME);
+        if (!group) {
+            console.error(`❌ Group "${process.env.WHATSAPP_GROUP_NAME}" not found.`);
+            return;
         }
-    }, {
-        timezone: TIMEZONE
-    });
+        const groupId = group.id._serialized;
+
+        // Get link
+        let link = getNextLink();
+        if (!link) {
+            console.log('⚠ No links found to send.');
+            return;
+        }
+
+        console.log("DEBUG: About to send message...");
+        await sendWithTimeout(groupId, `
+this is an automated bot msg. Testing is on. If you receive this msg at ${railwayTime} IST, it's working fine 🚀 📌 Today’s DSA problem: ${link}`);
+        console.log(`✅ Sent: ${link}`);
+
+    } catch (err) {
+        console.error('❌ Failed to send link:', err);
+    }
+}, {
+    timezone: TIMEZONE
 });
 
 // ======== ERROR HANDLING ========
 client.on('error', (err) => {
     console.error('❌ Client error:', err);
+});
+
+client.on('disconnected', (reason) => {
+    console.error("❌ WhatsApp disconnected:", reason);
+    console.log("🔄 Reconnecting...");
+    client.initialize();
+});
+
+client.on('auth_failure', (msg) => {
+    console.error("❌ Authentication failed:", msg);
 });
 
 // ======== INITIALIZE CLIENT ========
