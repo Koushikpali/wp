@@ -1,5 +1,5 @@
+// index.js
 const { Client, LocalAuth } = require("whatsapp-web.js");
-const { executablePath } = require("puppeteer");
 const cron = require("node-cron");
 
 console.log("🚀 Starting WhatsApp Bot...");
@@ -8,12 +8,11 @@ console.log("🚀 Starting WhatsApp Bot...");
 console.log("DEBUG: Creating WhatsApp client...");
 const client = new Client({
     authStrategy: new LocalAuth({
-        dataPath: '/mnt/whatsapp-session'   // persistent session
+        dataPath: '/mnt/whatsapp-session'   // persistent session (use Railway volume)
     }),
     puppeteer: {
         headless: true,
-        
-        executablePath: executablePath(),
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable',
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -26,12 +25,12 @@ const client = new Client({
             '--disable-software-rasterizer',
             '--window-size=1920,1080',
             '--disable-extensions',
-                   '--remote-debugging-port=9222',        // 👈 ADD THIS
-        '--remote-debugging-address=0.0.0.0',
+            '--remote-debugging-port=9222',
+            '--remote-debugging-address=0.0.0.0',
             '--disable-background-timer-throttling',
             '--disable-backgrounding-occluded-windows',
             '--disable-renderer-backgrounding',
-              '--user-data-dir=/tmp/puppeteer_profile' 
+            '--user-data-dir=/tmp/puppeteer_profile'
         ],
     }
 });
