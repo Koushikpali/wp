@@ -17,20 +17,24 @@ RUN apt-get update && apt-get install -y \
   libxcomposite1 \
   libxdamage1 \
   libxrandr2 \
+  libgbm1 \
+  libgtk-3-0 \
   xdg-utils \
   libu2f-udev \
   && rm -rf /var/lib/apt/lists/*
 
-# Install Google Chrome
+# Install Google Chrome Stable
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
   && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" \
      > /etc/apt/sources.list.d/google-chrome.list \
   && apt-get update && apt-get install -y google-chrome-stable \
   && rm -rf /var/lib/apt/lists/*
 
+# App setup
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
 
+# Start app
 CMD ["npm", "start"]
