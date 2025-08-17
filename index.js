@@ -114,11 +114,13 @@ async function sendWithTimeout(chatId, message, timeoutMs = 10000) {
 
 // ======== WHATSAPP CLIENT ========
 console.log("DEBUG: Creating WhatsApp client...");
+
 const client = new Client({
     authStrategy: new LocalAuth({
         dataPath: '/mnt/whatsapp-session'
     }),
     puppeteer: {
+        headless: true, // <- make sure it's headless
         product: 'chrome',
         executablePath: puppeteer.executablePath(),
         args: [
@@ -128,10 +130,13 @@ const client = new Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--disable-gpu'
+            '--disable-gpu',
+            '--single-process',       // <- often fixes stuck loading screen
+            '--disable-software-rasterizer'
         ],
     }
 });
+
 
 // ======== QR CODE HANDLING ========
 client.on('qr', async (qr) => {
