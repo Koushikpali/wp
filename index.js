@@ -30,10 +30,6 @@ app.get('/', (req, res) => {
 });
 app.listen(PORT, () => console.log(`🌐 Keep-alive server running on port ${PORT}`));
 
-// ======== HEARTBEAT LOG ========
-setInterval(() => {
-    console.log(`💓 Bot alive at ${new Date().toLocaleString('en-IN', { timeZone: TIMEZONE })}`);
-}, 5 * 60 * 1000);
 
 // ======== LINK ROTATION ========
 const linksFilePath = path.join(__dirname, 'link.txt');
@@ -82,7 +78,9 @@ function getNextLink() {
         return null;
     }
     let lastIndex = getLastIndex();
-    let nextIndex = lastIndex % links.length;
+    console.log("last index is ",lastIndex);
+    let nextIndex = lastIndex % links.length();
+    
     console.log(`🔢 Next index: ${nextIndex}`);
     const linkToSend = links[nextIndex];
     saveLastIndex(nextIndex + 1);
@@ -156,6 +154,7 @@ client.on('ready', async () => {
         console.log('📤 Sending daily scheduled message...');
         try {
             let link = getNextLink();
+            console.log("link is",link)
             if (link) {
                 const msg = `
 🚀 Automated Bot Message
