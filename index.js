@@ -1,19 +1,17 @@
 // index.js
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const cron = require("node-cron");
+const qrcode = require("qrcode-terminal");
 
 console.log("🚀 Starting WhatsApp Bot...");
 
 // ================== CREATE CLIENT ==================
-console.log("DEBUG: Creating WhatsApp client...");
-
 const client = new Client({
   authStrategy: new LocalAuth({
-    dataPath: "/mnt/whatsapp-session", // persistent session
+    dataPath: "./whatsapp-session", // safer local dir
   }),
   puppeteer: {
     headless: true,
-    executablePath: "/usr/bin/google-chrome-stable",
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
@@ -23,7 +21,6 @@ const client = new Client({
       "--no-zygote",
       "--disable-gpu",
       "--disable-software-rasterizer",
-      "--single-process",
       "--disable-background-networking",
       "--disable-default-apps",
       "--disable-extensions",
@@ -31,7 +28,6 @@ const client = new Client({
       "--mute-audio",
       "--disable-notifications",
       "--window-size=1920,1080",
-      "--user-data-dir=/tmp/puppeteer_profile", // Chrome profile dir
     ],
   },
 });
@@ -39,7 +35,7 @@ const client = new Client({
 // ================== EVENT HANDLERS ==================
 client.on("qr", (qr) => {
   console.log("⚡ Scan this QR code in WhatsApp:");
-  console.log(qr);
+  qrcode.generate(qr, { small: true }); // nicer QR in terminal
 });
 
 client.on("ready", () => {
@@ -56,22 +52,21 @@ client.on("auth_failure", (msg) => {
 
 client.on("disconnected", (reason) => {
   console.error("❌ Client disconnected:", reason);
-  console.log("♻ Restarting client in 5s...");
-  setTimeout(() => client.initialize(), 5000);
+  console.log("♻ Restarting client in 10s...");
+  setTimeout(() => client.initialize(), 10000);
 });
 
 // ================== SAFE SEND FUNCTION ==================
 async function safeSend(to, message) {
   try {
-    if (!client.pupPage || client.pupPage.isClosed()) {
-      console.error("⚠ Puppeteer page closed, reinitializing...");
-      await client.initialize();
+    if (!client.info || !client.info.wid) {
+      console.error("⚠ Client not ready, skipping send.");
       return;
     }
     await client.sendMessage(to, message);
-    console.log(`✅ Sent message to ${to}:`, message);
+    console.log(`✅ Sent message to ${to}: ${message}`);
   } catch (err) {
-    console.error("❌ Failed to send message:", err);
+    console.error("❌ Failed to send message:", err.message);
   }
 }
 
@@ -80,12 +75,7 @@ cron.schedule("*/15 * * * *", async () => {
   const now = new Date();
   console.log(`📤 Cron triggered at: ${now.toLocaleString()}`);
 
-  if (!client.info || !client.info.wid) {
-    console.log("⚠ WhatsApp client not connected, skipping send.");
-    return;
-  }
-
-  const to = "917869495473@c.us";  // Replace with your target number
+  const to = "917869495473@c.us"; // change to your number
   const message = "Hello! This is an automated cron message 🚀";
 
   await safeSend(to, message);
