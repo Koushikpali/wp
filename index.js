@@ -6,33 +6,38 @@ console.log("🚀 Starting WhatsApp Bot...");
 
 // ================== CREATE CLIENT ==================
 console.log("DEBUG: Creating WhatsApp client...");
+
+const { Client, LocalAuth } = require("whatsapp-web.js");
+
+console.log("🚀 Starting WhatsApp Bot...");
+
 const client = new Client({
-    authStrategy: new LocalAuth({
-        dataPath: '/mnt/whatsapp-session'   // persistent session (use Railway volume)
-    }),
-    puppeteer: {
-        headless: true,
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable',
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu',
-            '--single-process',
-            '--disable-software-rasterizer',
-            '--window-size=1920,1080',
-            '--disable-extensions',
-            '--remote-debugging-port=9222',
-            '--remote-debugging-address=0.0.0.0',
-            '--disable-background-timer-throttling',
-            '--disable-backgrounding-occluded-windows',
-            '--disable-renderer-backgrounding',
-            '--user-data-dir=/tmp/puppeteer_profile'
-        ],
-    }
+  authStrategy: new LocalAuth({
+    dataPath: "/mnt/whatsapp-session", // persistent session
+  }),
+  puppeteer: {
+    headless: true,
+    executablePath: "/usr/bin/google-chrome-stable",
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-accelerated-2d-canvas",
+      "--no-first-run",
+      "--no-zygote",
+      "--disable-gpu",
+      "--disable-software-rasterizer",
+      "--single-process",
+      "--disable-background-networking",
+      "--disable-default-apps",
+      "--disable-extensions",
+      "--disable-sync",
+      "--mute-audio",
+      "--disable-notifications",
+      "--window-size=1920,1080",
+      "--user-data-dir=/tmp/puppeteer_profile", // separate Chrome profile
+    ],
+  },
 });
 
 // ================== EVENT HANDLERS ==================
