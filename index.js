@@ -28,7 +28,8 @@ const client = new Client({
             '--disable-extensions',
             '--disable-background-timer-throttling',
             '--disable-backgrounding-occluded-windows',
-            '--disable-renderer-backgrounding'
+            '--disable-renderer-backgrounding',
+              '--user-data-dir=/tmp/puppeteer_profile' 
         ],
     }
 });
