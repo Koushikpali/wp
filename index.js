@@ -1,5 +1,5 @@
 const { Client, LocalAuth } = require("whatsapp-web.js");
-const puppeteer = require("puppeteer-core");
+const puppeteer = require("puppeteer");
 const cron = require("node-cron");
 
 console.log("🚀 Starting WhatsApp Bot...");
@@ -13,7 +13,7 @@ const client = new Client({
     puppeteer: {
         headless: true,
         product: 'chrome',
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+        executablePath:puppeteer.executablePath(),
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
