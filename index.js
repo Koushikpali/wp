@@ -30,6 +30,10 @@ app.get('/', (req, res) => {
 });
 app.listen(PORT, () => console.log(`🌐 Keep-alive server running on port ${PORT}`));
 
+// ======== HEARTBEAT LOG ========
+setInterval(() => {
+    console.log(`💓 Bot alive at ${new Date().toLocaleString('en-IN', { timeZone: TIMEZONE })}`);
+}, 5 * 60 * 1000);
 
 // ======== LINK ROTATION ========
 const linksFilePath = path.join(__dirname, 'link.txt');
