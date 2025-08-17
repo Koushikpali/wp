@@ -13,7 +13,7 @@ const client = new Client({
     puppeteer: {
         headless: true,
         product: 'chrome',
-        executablePath: puppeteer.executablePath(),
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
