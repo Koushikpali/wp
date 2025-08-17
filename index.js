@@ -1,5 +1,5 @@
 const { Client, LocalAuth } = require("whatsapp-web.js");
-const puppeteer = require("puppeteer");
+const { executablePath } = require("puppeteer");
 const cron = require("node-cron");
 
 console.log("🚀 Starting WhatsApp Bot...");
@@ -12,8 +12,8 @@ const client = new Client({
     }),
     puppeteer: {
         headless: true,
-        product: 'chrome',
-        executablePath:'/usr/bin/google-chrome',
+        
+        executablePath: executablePath(),
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -56,8 +56,8 @@ client.on("auth_failure", (msg) => {
 
 client.on("disconnected", (reason) => {
     console.error("❌ Client disconnected:", reason);
-    console.log("♻ Restarting client...");
-    client.initialize();
+    console.log("♻ Restarting client in 5s...");
+    setTimeout(() => client.initialize(), 5000);
 });
 
 // ================== SAFE SEND FUNCTION ==================
