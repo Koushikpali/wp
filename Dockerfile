@@ -1,6 +1,7 @@
+# Use lightweight Node.js
 FROM node:18-slim
 
-# Install dependencies for Chrome
+# Install system dependencies for Chrome & Puppeteer
 RUN apt-get update && apt-get install -y \
   wget gnupg ca-certificates \
   fonts-liberation \
@@ -21,20 +22,33 @@ RUN apt-get update && apt-get install -y \
   libgtk-3-0 \
   xdg-utils \
   libu2f-udev \
+  unzip \
   && rm -rf /var/lib/apt/lists/*
 
-# Install Google Chrome Stable
+# Install Chrome (stable)
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
   && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" \
      > /etc/apt/sources.list.d/google-chrome.list \
   && apt-get update && apt-get install -y google-chrome-stable \
   && rm -rf /var/lib/apt/lists/*
 
-# App setup
+# Set environment variable so Puppeteer uses installed Chrome
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+
+# Create app dir
 WORKDIR /app
+
+# Install dependencies first (better caching)
 COPY package*.json ./
-RUN npm install
+RUN npm install --omit=dev
+
+# Copy app source
 COPY . .
+
+# Healthcheck (optional, for Railway)
+HEALTHCHECK --interval=30s --timeout=10s \
+  CMD node -e "process.exit(0)"
 
 # Start app
 CMD ["npm", "start"]
