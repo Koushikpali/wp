@@ -26,6 +26,8 @@ const client = new Client({
             '--disable-software-rasterizer',
             '--window-size=1920,1080',
             '--disable-extensions',
+                   '--remote-debugging-port=9222',        // 👈 ADD THIS
+        '--remote-debugging-address=0.0.0.0',
             '--disable-background-timer-throttling',
             '--disable-backgrounding-occluded-windows',
             '--disable-renderer-backgrounding',
