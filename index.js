@@ -7,10 +7,6 @@ console.log("🚀 Starting WhatsApp Bot...");
 // ================== CREATE CLIENT ==================
 console.log("DEBUG: Creating WhatsApp client...");
 
-const { Client, LocalAuth } = require("whatsapp-web.js");
-
-console.log("🚀 Starting WhatsApp Bot...");
-
 const client = new Client({
   authStrategy: new LocalAuth({
     dataPath: "/mnt/whatsapp-session", // persistent session
@@ -35,64 +31,64 @@ const client = new Client({
       "--mute-audio",
       "--disable-notifications",
       "--window-size=1920,1080",
-      "--user-data-dir=/tmp/puppeteer_profile", // separate Chrome profile
+      "--user-data-dir=/tmp/puppeteer_profile", // Chrome profile dir
     ],
   },
 });
 
 // ================== EVENT HANDLERS ==================
 client.on("qr", (qr) => {
-    console.log("⚡ Scan this QR code in WhatsApp:");
-    console.log(qr);
+  console.log("⚡ Scan this QR code in WhatsApp:");
+  console.log(qr);
 });
 
 client.on("ready", () => {
-    console.log("✅ WhatsApp client is ready!");
+  console.log("✅ WhatsApp client is ready!");
 });
 
 client.on("authenticated", () => {
-    console.log("🔑 Authenticated with WhatsApp");
+  console.log("🔑 Authenticated with WhatsApp");
 });
 
 client.on("auth_failure", (msg) => {
-    console.error("❌ Authentication failed:", msg);
+  console.error("❌ Authentication failed:", msg);
 });
 
 client.on("disconnected", (reason) => {
-    console.error("❌ Client disconnected:", reason);
-    console.log("♻ Restarting client in 5s...");
-    setTimeout(() => client.initialize(), 5000);
+  console.error("❌ Client disconnected:", reason);
+  console.log("♻ Restarting client in 5s...");
+  setTimeout(() => client.initialize(), 5000);
 });
 
 // ================== SAFE SEND FUNCTION ==================
 async function safeSend(to, message) {
-    try {
-        if (!client.pupPage || client.pupPage.isClosed()) {
-            console.error("⚠ Puppeteer page closed, reinitializing...");
-            await client.initialize();
-            return;
-        }
-        await client.sendMessage(to, message);
-        console.log(`✅ Sent message to ${to}:`, message);
-    } catch (err) {
-        console.error("❌ Failed to send message:", err);
+  try {
+    if (!client.pupPage || client.pupPage.isClosed()) {
+      console.error("⚠ Puppeteer page closed, reinitializing...");
+      await client.initialize();
+      return;
     }
+    await client.sendMessage(to, message);
+    console.log(`✅ Sent message to ${to}:`, message);
+  } catch (err) {
+    console.error("❌ Failed to send message:", err);
+  }
 }
 
 // ================== CRON JOB (Every 15 mins) ==================
 cron.schedule("*/15 * * * *", async () => {
-    const now = new Date();
-    console.log(`📤 Cron triggered at: ${now.toLocaleString()}`);
+  const now = new Date();
+  console.log(`📤 Cron triggered at: ${now.toLocaleString()}`);
 
-    if (!client.info || !client.info.wid) {
-        console.log("⚠ WhatsApp client not connected, skipping send.");
-        return;
-    }
+  if (!client.info || !client.info.wid) {
+    console.log("⚠ WhatsApp client not connected, skipping send.");
+    return;
+  }
 
-    const to = "917869495473@c.us";  // Replace with your target number
-    const message = "Hello! This is an automated cron message 🚀";
+  const to = "917869495473@c.us";  // Replace with your target number
+  const message = "Hello! This is an automated cron message 🚀";
 
-    await safeSend(to, message);
+  await safeSend(to, message);
 });
 
 // ================== START CLIENT ==================
