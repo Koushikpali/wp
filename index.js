@@ -15,30 +15,35 @@ const railwayTime = process.env.RAILWAY_TIME || '09:00';
 const [hour, minute] = railwayTime.split(':').map(Number);
 const TIMEZONE = 'Asia/Kolkata';
 
-// ======== STARTUP LOG ========
+console.log('================= BOT STARTING =================');
+console.log(`⏰ Railway time set to: ${railwayTime} (hour=${hour}, minute=${minute})`);
+console.log(`🌍 Timezone: ${TIMEZONE}`);
 console.log(`🚀 Bot starting at ${new Date().toLocaleString('en-IN', { timeZone: TIMEZONE })}`);
+console.log('================================================');
 
 // ======== KEEP-ALIVE SERVER ========
 const app = express();
 const PORT = process.env.PORT || 3000;
-app.get('/', (req, res) => res.send('✅ Bot is alive!'));
+app.get('/', (req, res) => {
+    console.log("🌐 GET / request received");
+    res.send('✅ Bot is alive!');
+});
 app.listen(PORT, () => console.log(`🌐 Keep-alive server running on port ${PORT}`));
 
-// ======== HEARTBEAT LOG ========
-setInterval(() => {
-    console.log(`💓 Bot alive at ${new Date().toLocaleString('en-IN', { timeZone: TIMEZONE })}`);
-}, 5 * 60 * 1000);
 
 // ======== LINK ROTATION ========
 const linksFilePath = path.join(__dirname, 'link.txt');
 const indexFilePath = path.join(__dirname, 'linkIndex.json');
 
 function getLinks() {
+    console.log("📂 Reading links from link.txt...");
     try {
-        return fs.readFileSync(linksFilePath, 'utf-8')
+        const links = fs.readFileSync(linksFilePath, 'utf-8')
             .split('\n')
             .map(line => line.trim())
             .filter(line => line.length > 0);
+        console.log(`✅ Found ${links.length} links`);
+        return links;
     } catch (err) {
         console.error('❌ Error reading links file:', err);
         return [];
@@ -46,32 +51,43 @@ function getLinks() {
 }
 
 function getLastIndex() {
+    console.log("📂 Reading last index...");
     try {
         if (fs.existsSync(indexFilePath)) {
             const json = JSON.parse(fs.readFileSync(indexFilePath, 'utf-8'));
+            console.log(`✅ Last index: ${json.lastIndex}`);
             return json.lastIndex || 0;
         }
     } catch (err) {
         console.error('❌ Error reading index file:', err);
     }
+    console.log("⚠ No index found, using 0");
     return 0;
 }
 
 function saveLastIndex(index) {
+    console.log(`💾 Saving last index: ${index}`);
     fs.writeFileSync(indexFilePath, JSON.stringify({ lastIndex: index }, null, 2));
 }
 
 function getNextLink() {
+    console.log("➡ Getting next link...");
     const links = getLinks();
-    if (links.length === 0) return null;
+    if (links.length === 0) {
+        console.log("⚠ No links available");
+        return null;
+    }
     let lastIndex = getLastIndex();
     let nextIndex = lastIndex % links.length;
+    console.log(`🔢 Next index: ${nextIndex}`);
     const linkToSend = links[nextIndex];
     saveLastIndex(nextIndex + 1);
+    console.log(`🔗 Next link: ${linkToSend}`);
     return linkToSend;
 }
 
 // ======== WHATSAPP CLIENT ========
+console.log("📱 Initializing WhatsApp client...");
 const client = new Client({
     authStrategy: new LocalAuth({
         dataPath: '/mnt/whatsapp-session'
@@ -93,7 +109,7 @@ const client = new Client({
 
 // ======== QR CODE HANDLING ========
 client.on('qr', async (qr) => {
-    console.log('📸 Scan this QR code with WhatsApp Linked Devices:');
+    console.log('📸 QR event triggered. Generating QR code...');
     qrcode.generate(qr, { small: true });
 
     await QRCode.toFile('qr.png', qr);
@@ -115,9 +131,10 @@ client.on('qr', async (qr) => {
 
 // ======== WHEN CLIENT IS READY ========
 client.on('ready', async () => {
-    console.log('✅ WhatsApp Bot is ready!');
+    console.log('✅ WhatsApp Bot is ready! Fetching group info...');
 
     const groupName = process.env.WHATSAPP_GROUP_NAME;
+    console.log(`🔍 Looking for group: "${groupName}"`);
     const chats = await client.getChats();
     const group = chats.find(chat => chat.isGroup && chat.name === groupName);
 
@@ -127,16 +144,21 @@ client.on('ready', async () => {
     }
 
     const groupId = group.id._serialized;
+    console.log(`✅ Found group "${groupName}" with ID: ${groupId}`);
 
     // ======== DAILY MESSAGE ========
+    console.log(`📅 Scheduling daily message at ${railwayTime} IST...`);
     cron.schedule(`${minute} ${hour} * * *`, async () => {
         console.log('📤 Sending daily scheduled message...');
         try {
             let link = getNextLink();
             if (link) {
-                await client.sendMessage(groupId, `
-this is an automated bot msg. Testing is on. If you receive this msg at ${railwayTime} IST, it's working fine 🚀 📌 Today’s DSA problem: ${link}`);
-                console.log(`✅ Sent: ${link}`);
+                const msg = `
+🚀 Automated Bot Message
+🕒 Time: ${railwayTime} IST
+📌 Today’s DSA Problem: ${link}`;
+                await client.sendMessage(groupId, msg);
+                console.log(`✅ Sent message: ${msg}`);
             } else {
                 console.log('⚠ No links found to send.');
             }
@@ -149,9 +171,17 @@ this is an automated bot msg. Testing is on. If you receive this msg at ${railwa
 });
 
 // ======== ERROR HANDLING ========
+client.on('auth_failure', (msg) => {
+    console.error('❌ Authentication failure:', msg);
+});
+client.on('disconnected', (reason) => {
+    console.error('❌ Client disconnected:', reason);
+});
 client.on('error', (err) => {
     console.error('❌ Client error:', err);
 });
 
 // ======== INITIALIZE CLIENT ========
+console.log("⚡ Starting client.initialize()...");
 client.initialize();
+console.log("⚡ client.initialize() called.");
