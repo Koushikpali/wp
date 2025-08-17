@@ -79,7 +79,7 @@ function getNextLink() {
     }
     let lastIndex = getLastIndex();
     console.log("last index is ",lastIndex);
-    let nextIndex = lastIndex % links.length();
+    let nextIndex = lastIndex % links.length;
     
     console.log(`🔢 Next index: ${nextIndex}`);
     const linkToSend = links[nextIndex];
